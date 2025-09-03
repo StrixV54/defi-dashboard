@@ -1,154 +1,91 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import React, { useState, useEffect, useCallback } from "react";
+import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { WalletConnectDialog } from "@/components/ui/wallet-connect-dialog";
-import { Pool, PoolCategory, POOL_CATEGORIES } from "@/types/pool";
-import { fetchSpecificPools, formatCurrency, formatPercentage } from "@/services/api";
 import { useAppKitAccount } from "@reown/appkit/react";
-import { Lock, TrendingUp, Activity } from "lucide-react";
+import { SquareLibrary } from "lucide-react";
+
+// Internal components
+import { PoolRow } from "./PoolRow";
+import { PoolFilters } from "./PoolFilters";
+import { PoolsLoadingSkeleton } from "./PoolsLoadingSkeleton";
+import { WalletConnectDialog } from "@/components/ui/wallet-connect-dialog";
+
+// Types and utilities
+import type { Pool, PoolCategory } from "@/types/pool";
+import { POOL_CATEGORIES } from "@/types/pool";
+import { fetchSpecificPools } from "@/services/api";
+
+// Constants
+const INITIAL_CATEGORY = POOL_CATEGORIES[0];
+const LOADING_SKELETON_ROWS = 3;
 
 interface PoolsTableProps {
     className?: string;
 }
 
-export function PoolsTable({ className }: PoolsTableProps) {
+export const PoolsTable: React.FC<PoolsTableProps> = ({ className }) => {
     const [pools, setPools] = useState<Pool[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [selectedCategory, setSelectedCategory] = useState<PoolCategory>(POOL_CATEGORIES[0]);
-    const [showLockDialog, setShowLockDialog] = useState(false);
+    const [selectedCategory, setSelectedCategory] = useState<PoolCategory>(INITIAL_CATEGORY);
+    const [showWalletDialog, setShowWalletDialog] = useState(false);
 
-    const router = useRouter();
     const { isConnected } = useAppKitAccount();
 
-    // If user is not connected, set the selected category to the first category
+    // Reset category when wallet disconnects
     useEffect(() => {
         if (!isConnected) {
-            setSelectedCategory(POOL_CATEGORIES[0]);
+            setSelectedCategory(INITIAL_CATEGORY);
         }
     }, [isConnected]);
 
-    const loadPools = async () => {
-        try {
-            setLoading(true);
-            setError(null);
-            const data = await fetchSpecificPools();
-            setPools(data);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : "Failed to load pools");
-        } finally {
-            setLoading(false);
-        }
-    };
+    useEffect(() => {
+        (async () => {
+            try {
+                setIsLoading(true);
+                setError(null);
 
-  useEffect(() => {
-      loadPools();
-  }, []);
+                const poolsData = await fetchSpecificPools();
+                setPools(poolsData);
+            } catch (err) {
+                const errorMessage = err instanceof Error ? err.message : "Failed to load pools data";
+                setError(errorMessage);
+            } finally {
+                setIsLoading(false);
+            }
+        })();
+    }, []);
 
     const filteredPools = pools.filter((pool) => pool.category === selectedCategory);
 
-    const handlePoolClick = (poolId: string, category?: PoolCategory) => {
-        // Check if this is a Yield Aggregator pool and user is not connected
-        if (category === "Yield Aggregator" && !isConnected) {
-            setShowLockDialog(true);
-            return;
-        }
+    const handleCategoryChange = useCallback(
+        (category: PoolCategory) => {
+            // Check if trying to access Yield Aggregator without wallet
+            if (category === "Yield Aggregator" && !isConnected) {
+                setShowWalletDialog(true);
+                return;
+            }
 
-        router.push(`/pool/${poolId}`);
-    };
-
-    const handleCategoryChange = (category: PoolCategory) => {
-        if (category === "Yield Aggregator" && !isConnected) {
-            setShowLockDialog(true);
-            return;
-        }
-        setSelectedCategory(category);
-    };
-
-    const renderPoolRow = (pool: Pool) => {
-        const isLocked = pool.category === "Yield Aggregator" && !isConnected;
-
-        return (
-            <TableRow key={pool.pool} className={`cursor-pointer hover:bg-muted/50 transition-colors ${isLocked ? "opacity-60" : ""}`} onClick={() => handlePoolClick(pool.pool, pool.category)}>
-                <TableCell className="font-medium">
-                    <div className="flex items-center gap-2">
-                        {isLocked && <Lock className="h-4 w-4 text-muted-foreground" />}
-                        {pool.project}
-                    </div>
-                </TableCell>
-                <TableCell>
-                    <Badge variant={"default"}>{pool.category}</Badge>
-                </TableCell>
-                <TableCell className="font-mono text-sm">{pool.symbol}</TableCell>
-                <TableCell className="text-right font-medium">{formatCurrency(pool.tvlUsd)}</TableCell>
-                <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1">
-                        <TrendingUp className="h-4 w-4 text-green-500" />
-                        {pool.apy ? formatPercentage(pool.apy) : "N/A"}
-                    </div>
-                </TableCell>
-                <TableCell className="text-right">{pool.apyMean30d ? formatPercentage(pool.apyMean30d) : "N/A"}</TableCell>
-                <TableCell className="text-right">{pool.prediction ? formatPercentage(pool.prediction) : "N/A"}</TableCell>
-                <TableCell className="text-right">{pool.sigma ? pool.sigma.toFixed(3) : "N/A"}</TableCell>
-            </TableRow>
-        );
-    };
-
-    const renderLoadingSkeleton = () => (
-        <>
-            {Array.from({ length: 3 }).map((_, i) => (
-                <TableRow key={i}>
-                    <TableCell>
-                        <Skeleton className="h-6 flex-1" />
-                    </TableCell>
-                    <TableCell>
-                        <Skeleton className="h-6 flex-1" />
-                    </TableCell>
-                    <TableCell>
-                        <Skeleton className="h-6 flex-1" />
-                    </TableCell>
-                    <TableCell>
-                        <Skeleton className="h-6 flex-1" />
-                    </TableCell>
-                    <TableCell>
-                        <Skeleton className="h-6 flex-1" />
-                    </TableCell>
-                    <TableCell>
-                        <Skeleton className="h-6 flex-1" />
-                    </TableCell>
-                    <TableCell>
-                        <Skeleton className="h-6 flex-1" />
-                    </TableCell>
-                    <TableCell>
-                        <Skeleton className="h-6 flex-1" />
-                    </TableCell>
-                </TableRow>
-            ))}
-        </>
+            setSelectedCategory(category);
+        },
+        [isConnected]
     );
 
     if (error) {
         return (
             <Card className={className}>
                 <CardContent className="p-6">
-                    <div className="text-center">
-                        <p className="text-destructive mb-4">Error loading pools: {error}</p>
-                        <Button onClick={loadPools} variant="outline">
-                            Retry
-                        </Button>
+                    <div className="text-center space-y-4">
+                        <p className="text-destructive">Error loading pools: {error}</p>
                     </div>
                 </CardContent>
             </Card>
         );
     }
 
+    // Main render
     return (
         <>
             <Card className={className}>
@@ -156,27 +93,14 @@ export function PoolsTable({ className }: PoolsTableProps) {
                     <div className="flex items-center justify-between mb-3">
                         <CardTitle className="flex items-center gap-2">Pools</CardTitle>
                         <div className="flex items-center gap-2">
-                            <Activity className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-sm text-muted-foreground">{filteredPools.length} pools</span>
+                            <SquareLibrary   className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm text-muted-foreground">
+                                {filteredPools.length} {filteredPools.length === 1 ? "pool" : "pools"}
+                            </span>
                         </div>
                     </div>
 
-                    <Tabs value={selectedCategory} onValueChange={(value) => handleCategoryChange(value as PoolCategory)} className="w-full tab-container">
-                        <TabsList className="grid w-full grid-cols-3 bg-muted/50 h-10 rounded-md">
-                            {POOL_CATEGORIES.map((category) => (
-                                <TabsTrigger
-                                    key={category}
-                                    value={category}
-                                    title={category === "Yield Aggregator" && !isConnected ? "Connect Wallet to Access!!" : category}
-                                    className={`text-sm shadow-none font-medium transition-all duration-200 rounded-sm ${category === "Yield Aggregator" && !isConnected ? "disabled:pointer-events-auto disabled:cursor-not-allowed" : ""}`}
-                                    // disabled={category === 'Yield Aggregator' && !isConnected}
-                                >
-                                    {category === "Yield Aggregator" && !isConnected && <Lock className="h-3 w-3 mr-1" />}
-                                    {category.replace(" ", " ")}
-                                </TabsTrigger>
-                            ))}
-                        </TabsList>
-                    </Tabs>
+                    <PoolFilters selectedCategory={selectedCategory} onCategoryChange={handleCategoryChange} isWalletConnected={isConnected} />
                 </CardHeader>
 
                 <CardContent>
@@ -194,20 +118,22 @@ export function PoolsTable({ className }: PoolsTableProps) {
                                     <TableHead className="text-right">Risk (σ)</TableHead>
                                 </TableRow>
                             </TableHeader>
-                            <TableBody>{loading ? renderLoadingSkeleton() : filteredPools.map(renderPoolRow)}</TableBody>
+                            <TableBody>
+                                {isLoading ? <PoolsLoadingSkeleton rows={LOADING_SKELETON_ROWS} /> : filteredPools.map((pool) => <PoolRow key={pool.pool} pool={pool} isWalletConnected={isConnected} onLockedPoolClick={() => setShowWalletDialog(true)} />)}
+                            </TableBody>
                         </Table>
                     </div>
 
-                    {!loading && filteredPools.length === 0 && <div className="text-center py-8 text-muted-foreground">No pools found for the selected category.</div>}
+                    {isLoading || filteredPools.length > 0 ? null : <div className="text-center py-8 text-muted-foreground">No pools found for the selected category.</div>}
                 </CardContent>
             </Card>
 
             <WalletConnectDialog
-                open={showLockDialog}
-                onOpenChange={setShowLockDialog}
+                isOpen={showWalletDialog}
+                onClose={() => setShowWalletDialog(false)}
                 title="Connect Wallet Required"
                 description="Yield Aggregator pools are locked until you connect a crypto wallet. Please connect your wallet to access these investment opportunities."
             />
         </>
     );
-}
+};

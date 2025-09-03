@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel } from '@/components/ui/alert-dialog'
+import { WalletConnectDialog } from '@/components/ui/wallet-connect-dialog'
 import { PoolDetails, PoolChartData } from '@/types/pool'
 import { fetchPoolDetails, fetchPoolChart, formatCurrency, formatPercentage } from '@/services/api'
 import { useAppKitAccount } from '@reown/appkit/react'
@@ -70,19 +70,6 @@ export default function PoolPage() {
       setError(err instanceof Error ? err.message : 'Failed to load pool data')
     } finally {
       setLoading(false)
-    }
-  }
-
-  const getCategoryBadgeVariant = (category?: string) => {
-    switch (category) {
-      case 'Lending':
-        return 'default'
-      case 'Liquid Staking':
-        return 'secondary'
-      case 'Yield Aggregator':
-        return 'destructive'
-      default:
-        return 'outline'
     }
   }
 
@@ -314,7 +301,7 @@ export default function PoolPage() {
                       {pool.symbol} • {pool.chain}
                     </p>
                   </div>
-                  <Badge variant={getCategoryBadgeVariant(pool.category)}>
+                  <Badge variant={"default"}>
                     {pool.category}
                   </Badge>
                 </div>
@@ -327,32 +314,21 @@ export default function PoolPage() {
         )}
       </div>
 
-      <AlertDialog open={showLockDialog} onOpenChange={setShowLockDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <Lock className="h-5 w-5" />
-              Connect Wallet Required
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              This Yield Aggregator pool is locked until you connect a crypto wallet.
-              Please connect your wallet to access this investment opportunity.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => router.back()}>
-              Go Back
-            </AlertDialogCancel>
-            <Button onClick={() => {
-              setShowLockDialog(false)
-              // Trigger wallet connection modal
-              document.querySelector('appkit-button')?.click()
-            }}>
-              Connect Wallet
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <WalletConnectDialog
+        isOpen={showLockDialog}
+        onClose={() => setShowLockDialog(false)}
+        title="Connect Wallet Required"
+        description="This Yield Aggregator pool is locked until you connect a crypto wallet. Please connect your wallet to access this investment opportunity."
+        showConnectButton={true}
+        onConnect={() => {
+          // Custom connect handler that goes back after connecting
+          const walletButton = document.querySelector('appkit-button')
+          if (walletButton) {
+            (walletButton as HTMLElement).click()
+          }
+          setTimeout(() => router.back(), 1000) // Give time for wallet connection
+        }}
+      />
     </>
   )
 }
