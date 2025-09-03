@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel } from "@/components/ui/alert-dialog";
+import { WalletConnectDialog } from "@/components/ui/wallet-connect-dialog";
 import { Pool, PoolCategory, POOL_CATEGORIES } from "@/types/pool";
 import { fetchSpecificPools, formatCurrency, formatPercentage } from "@/services/api";
 import { useAppKitAccount } from "@reown/appkit/react";
@@ -27,10 +27,6 @@ export function PoolsTable({ className }: PoolsTableProps) {
 
     const router = useRouter();
     const { isConnected } = useAppKitAccount();
-
-    useEffect(() => {
-        loadPools();
-    }, []);
 
     // If user is not connected, set the selected category to the first category
     useEffect(() => {
@@ -51,6 +47,10 @@ export function PoolsTable({ className }: PoolsTableProps) {
             setLoading(false);
         }
     };
+
+  useEffect(() => {
+      loadPools();
+  }, []);
 
     const filteredPools = pools.filter((pool) => pool.category === selectedCategory);
 
@@ -202,20 +202,12 @@ export function PoolsTable({ className }: PoolsTableProps) {
                 </CardContent>
             </Card>
 
-            <AlertDialog open={showLockDialog} onOpenChange={setShowLockDialog}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle className="flex items-center gap-2">
-                            <Lock className="h-5 w-5" />
-                            Connect Wallet Required
-                        </AlertDialogTitle>
-                        <AlertDialogDescription>Yield Aggregator pools are locked until you connect a crypto wallet. Please connect your wallet to access these investment opportunities.</AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Close</AlertDialogCancel>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
+            <WalletConnectDialog
+                open={showLockDialog}
+                onOpenChange={setShowLockDialog}
+                title="Connect Wallet Required"
+                description="Yield Aggregator pools are locked until you connect a crypto wallet. Please connect your wallet to access these investment opportunities."
+            />
         </>
     );
 }

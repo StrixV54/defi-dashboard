@@ -108,11 +108,11 @@ export async function fetchPoolChart(poolId: string): Promise<PoolChartData[]> {
 
     // Process data to get first day of each month for last 12 months
     const twelveMonthsAgo = subMonths(new Date(), 12)
-    const monthlyData: PoolChartData[] = []
 
     // Group data by month and get first day of each month
     const monthlyMap = new Map<string, PoolChartData>()
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     rawData.forEach((item: any) => {
       const date = new Date(item.timestamp)
       if (date >= twelveMonthsAgo) {
