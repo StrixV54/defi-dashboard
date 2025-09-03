@@ -5,19 +5,13 @@ import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAppKitAccount } from "@reown/appkit/react";
 import { SquareLibrary } from "lucide-react";
-
-// Internal components
 import { PoolRow } from "./PoolRow";
 import { PoolFilters } from "./PoolFilters";
 import { PoolsLoadingSkeleton } from "./PoolsLoadingSkeleton";
 import { WalletConnectDialog } from "@/components/ui/wallet-connect-dialog";
-
-// Types and utilities
 import type { Pool, PoolCategory } from "@/types/pool";
 import { POOL_CATEGORIES } from "@/types/pool";
 import { fetchSpecificPools } from "@/services/api";
-
-// Constants
 const INITIAL_CATEGORY = POOL_CATEGORIES[0];
 const LOADING_SKELETON_ROWS = 3;
 
