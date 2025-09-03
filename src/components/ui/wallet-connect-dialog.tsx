@@ -15,7 +15,11 @@ interface WalletConnectDialogProps {
 
 export const WalletConnectDialog = ({ isOpen, onClose, title = 'Connect Wallet Required', description = 'You need to connect your crypto wallet to access this feature.', showConnectButton = false, onConnect }: WalletConnectDialogProps) => {
   const handleConnect = () => {
-    onConnect ? onConnect() : document.querySelector('appkit-button')?.click()
+    if (onConnect) {
+      onConnect()
+    } else {
+      document.querySelector('appkit-button')?.click()
+    }
     onClose()
   }
 
